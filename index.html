@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Lite Apps PWA</title>
+    <link rel="stylesheet" href="/src/css/styles.css">
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>Lite Apps Manager</h1>
+        <button id="download-project" class="download-button">Download Project (sb1-v6jb7lup)</button>
+      </header>
+
+      <form id="add-app-form" class="add-app-form">
+        <div class="form-group">
+          <label for="app-name">App Name</label>
+          <input type="text" id="app-name" required>
+        </div>
+        <div class="form-group">
+          <label for="app-url">App URL</label>
+          <input type="url" id="app-url" required>
+        </div>
+        <div class="form-group">
+          <label for="app-icon">Icon URL</label>
+          <input type="url" id="app-icon" required>
+        </div>
+        <button type="submit">Add App</button>
+      </form>
+
+      <div id="apps-container" class="apps-grid"></div>
+    </div>
+
+    <div id="install-prompt" class="install-prompt">
+      <p>Add this app to your home screen!</p>
+      <button id="install-button">Install</button>
+    </div>
+
+    <script type="module">
+      import { UI } from './src/js/ui.js';
+      
+      const ui = new UI();
+      ui.init();
+
+      // PWA installation prompt
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('install-prompt').style.display = 'block';
+      });
+
+      document.getElementById('install-button').addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            console.log('User accepted the installation');
+          }
+          deferredPrompt = null;
+          document.getElementById('install-prompt').style.display = 'none';
+        }
+      });
+    </script>
+  </body>
+</html>
