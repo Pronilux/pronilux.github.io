@@ -1,0 +1,40 @@
+"""
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2>Bienvenido, {{ username }}</h2>
+    
+    <div class="checkin-buttons">
+        <form method="POST" action="{{ url_for('checkin') }}" style="display:inline;">
+            <button type="submit" class="btn">Realizar Check-in</button>
+        </form>
+        <form method="POST" action="{{ url_for('checkout') }}" style="display:inline;">
+            <button type="submit" class="btn">Realizar Check-out</button>
+        </form>
+    </div>
+
+    <h3>Registros de Tiempo</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Hora Entrada</th>
+                <th>Hora Salida</th>
+                <th>Horas Trabajadas</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for registro in registros %}
+            <tr>
+                <td>{{ registro[0] }}</td>
+                <td>{{ registro[1] }}</td>
+                <td>{{ registro[2] or 'En curso' }}</td>
+                <td>{{ '%.2f'|format(registro[3]) if registro[3] is not none else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+"""
