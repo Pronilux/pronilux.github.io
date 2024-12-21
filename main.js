@@ -1,23 +1,47 @@
-// Cargar video seleccionado
-document.getElementById('fileInput').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const videoElement = document.getElementById('video');
-        videoElement.src = URL.createObjectURL(file);
-        videoElement.load();
+// Configuración básica para reconocimiento de voz
+const subtitulosDiv = document.getElementById('subtitulos');
+const video = document.getElementById('video');
+let recognition;
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+
+    // Configuración del reconocimiento
+    recognition.continuous = true; // Reconocer en tiempo real
+    recognition.lang = 'es-ES'; // Idioma del reconocimiento
+    recognition.interimResults = true; // Mostrar resultados parciales
+} else {
+    console.error("El reconocimiento de voz no es compatible con este navegador.");
+}
+
+// Función para iniciar reconocimiento cuando se reproduce el video
+video.addEventListener('play', function () {
+    if (recognition) {
+        recognition.start();
+        console.log("Reconocimiento de voz iniciado.");
     }
 });
 
-// Sincronizar subtítulos en tiempo real
-const subtitulosDiv = document.getElementById('subtitulos');
-const subtitulos = [
-    { start: 0, end: 5, text: "Hola, bienvenidos al video." },
-    { start: 6, end: 10, text: "Este es un generador de subtítulos." },
-    { start: 11, end: 15, text: "Esperamos que lo disfrutes." }
-];
+// Función para detener reconocimiento cuando se pausa el video
+video.addEventListener('pause', function () {
+    if (recognition) {
+        recognition.stop();
+        console.log("Reconocimiento de voz detenido.");
+    }
+});
 
-document.getElementById('video').addEventListener('timeupdate', function() {
-    const currentTime = this.currentTime;
-    const subtituloActual = subtitulos.find(s => currentTime >= s.start && currentTime <= s.end);
-    subtitulosDiv.textContent = subtituloActual ? subtituloActual.text : "";
-});// Código JavaScript
+// Mostrar subtítulos generados en tiempo real
+if (recognition) {
+    recognition.onresult = function (event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        subtitulosDiv.textContent = transcript;
+    };
+
+    recognition.onerror = function (event) {
+        console.error("Error en reconocimiento de voz:", event.error);
+    };
+}
