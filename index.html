@@ -20,6 +20,7 @@
         }
         .video-container {
             margin: 20px 0;
+            position: relative;
         }
         video {
             width: 100%;
@@ -29,9 +30,12 @@
         #subtitles {
             margin-top: 20px;
             padding: 10px;
-            background-color: #f8f9fa;
+            background-color: black;
+            color: white;
             border-radius: 4px;
-            min-height: 100px;
+            min-height: 50px;
+            text-align: center;
+            font-size: 18px;
         }
         .file-input {
             margin: 20px 0;
@@ -43,13 +47,21 @@
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
+            margin: 5px;
         }
         button:hover {
             background-color: #0056b3;
         }
+        button:disabled {
+            background-color: #cccccc;
+        }
         #status {
             margin-top: 10px;
             color: #666;
+        }
+        .controls {
+            margin: 10px 0;
+            text-align: center;
         }
     </style>
 </head>
@@ -62,13 +74,16 @@
         </div>
 
         <div class="video-container">
-            <video id="videoPlayer" controls>
+            <video id="videoPlayer" controls crossorigin="anonymous">
                 Tu navegador no soporta el elemento video.
             </video>
         </div>
 
-        <button id="startRecognition">Iniciar Reconocimiento de Voz</button>
-        <button id="stopRecognition" disabled>Detener Reconocimiento</button>
+        <div class="controls">
+            <button id="startRecognition">Iniciar Subtítulos</button>
+            <button id="stopRecognition" disabled>Detener Subtítulos</button>
+            <button id="downloadSubtitles" disabled>Descargar Subtítulos</button>
+        </div>
         
         <div id="status">Estado: Esperando video...</div>
         <div id="subtitles"></div>
@@ -79,10 +94,13 @@
         const videoPlayer = document.getElementById('videoPlayer');
         const startButton = document.getElementById('startRecognition');
         const stopButton = document.getElementById('stopRecognition');
+        const downloadButton = document.getElementById('downloadSubtitles');
         const subtitlesDiv = document.getElementById('subtitles');
         const statusDiv = document.getElementById('status');
         
         let recognition = null;
+        let subtitlesText = [];
+        let startTime = 0;
 
         // Manejar la selección de archivo de video
         videoInput.addEventListener('change', (e) => {
@@ -90,8 +108,11 @@
             if (file) {
                 const videoUrl = URL.createObjectURL(file);
                 videoPlayer.src = videoUrl;
-                statusDiv.textContent = 'Estado: Video cargado. Listo para iniciar reconocimiento.';
+                statusDiv.textContent = 'Estado: Video cargado. Listo para iniciar subtítulos.';
                 startButton.disabled = false;
+                subtitlesText = [];
+                subtitlesDiv.textContent = '';
+                downloadButton.disabled = true;
             }
         });
 
@@ -103,15 +124,18 @@
             recognition.lang = 'es-ES';
 
             recognition.onstart = () => {
-                statusDiv.textContent = 'Estado: Reconocimiento de voz activo';
+                statusDiv.textContent = 'Estado: Generando subtítulos...';
                 startButton.disabled = true;
                 stopButton.disabled = false;
+                startTime = videoPlayer.currentTime;
+                videoPlayer.play();
             };
 
             recognition.onend = () => {
-                statusDiv.textContent = 'Estado: Reconocimiento de voz detenido';
+                statusDiv.textContent = 'Estado: Subtítulos detenidos';
                 startButton.disabled = false;
                 stopButton.disabled = true;
+                downloadButton.disabled = false;
             };
 
             recognition.onresult = (event) => {
@@ -121,30 +145,34 @@
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        finalTranscript += transcript + '\n';
+                        finalTranscript += transcript;
+                        const currentTime = videoPlayer.currentTime;
+                        subtitlesText.push({
+                            start: formatTime(startTime),
+                            end: formatTime(currentTime),
+                            text: transcript.trim()
+                        });
+                        startTime = currentTime;
                     } else {
                         interimTranscript += transcript;
                     }
                 }
 
-                subtitlesDiv.innerHTML = `
-                    <p><strong>Subtítulos:</strong></p>
-                    <p>${finalTranscript}</p>
-                    <p style="color: gray;">${interimTranscript}</p>
-                `;
+                subtitlesDiv.textContent = interimTranscript || finalTranscript || 'Escuchando...';
             };
 
             recognition.onerror = (event) => {
                 statusDiv.textContent = 'Error: ' + event.error;
+                stopButton.click();
             };
         } else {
-            statusDiv.textContent = 'El reconocimiento de voz no está soportado en este navegador';
+            statusDiv.textContent = 'Error: Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome.';
             startButton.disabled = true;
         }
 
         // Botones de control
         startButton.addEventListener('click', () => {
-            if (recognition) {
+            if (recognition && videoPlayer.src) {
                 recognition.start();
             }
         });
@@ -152,6 +180,42 @@
         stopButton.addEventListener('click', () => {
             if (recognition) {
                 recognition.stop();
+                videoPlayer.pause();
+            }
+        });
+
+        // Función para formatear tiempo
+        function formatTime(seconds) {
+            const pad = (num) => num.toString().padStart(2, '0');
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            return `${pad(hours)}:${pad(minutes)}:${pad(secs)},${ms.toString().padStart(3, '0')}`;
+        }
+
+        // Descargar subtítulos en formato SRT
+        downloadButton.addEventListener('click', () => {
+            let srtContent = '';
+            subtitlesText.forEach((sub, index) => {
+                srtContent += `${index + 1}\n${sub.start} --> ${sub.end}\n${sub.text}\n\n`;
+            });
+
+            const blob = new Blob([srtContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'subtitulos.srt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Manejar fin del video
+        videoPlayer.addEventListener('ended', () => {
+            if (recognition && recognition.state === 'active') {
+                stopButton.click();
             }
         });
     </script>
