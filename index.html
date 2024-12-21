@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Generador de Subtítulos</title>
+      <link rel="stylesheet" href="style.css">
+      <link rel="manifest" href="manifest.json">
+      <script>
+        // Registro del service worker
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('sw.js').then(function(registration) {
+              console.log('Service Worker registrado:', registration);
+            }, function(err) {
+              console.log('Error al registrar el Service Worker:', err);
+            });
+          });
+        }
+      </script>
+    </head>
+    <body>
+      <h1>Generador de Subtítulos en Tiempo Real</h1>
+      <input type="file" id="fileInput" accept="video/*">
+      <video id="video" controls></video>
+      <div id="subtitulos"></div>
+      <script type="module" src="main.js"></script>
+    </body>
+    </html>
