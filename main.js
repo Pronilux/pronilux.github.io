@@ -11,6 +11,8 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     recognition.continuous = true; // Reconocer en tiempo real
     recognition.lang = 'es-ES'; // Idioma del reconocimiento
     recognition.interimResults = true; // Mostrar resultados parciales
+
+    console.log("Reconocimiento de voz configurado.");
 } else {
     console.error("El reconocimiento de voz no es compatible con este navegador.");
 }
@@ -39,6 +41,7 @@ if (recognition) {
             transcript += event.results[i][0].transcript;
         }
         subtitulosDiv.textContent = transcript;
+        console.log("Subtítulos actualizados:", transcript);
     };
 
     recognition.onerror = function (event) {
