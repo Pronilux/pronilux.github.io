@@ -1,121 +1,29 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor con Subtítulos</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Generador de Subtítulos</title>
+      <link rel="stylesheet" href="style.css">
+      <link rel="manifest" href="manifest.json">
+      <script>
+        // Registro del service worker
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('sw.js').then(function(registration) {
+              console.log('Service Worker registrado:', registration);
+            }, function(err) {
+              console.log('Error al registrar el Service Worker:', err);
+            });
+          });
         }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .video-container {
-            margin: 20px 0;
-            position: relative;
-        }
-        video {
-            width: 100%;
-            max-width: 100%;
-            border-radius: 4px;
-        }
-        .file-input {
-            margin: 10px 0;
-        }
-        .status {
-            color: #666;
-            margin: 10px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Reproductor con Subtítulos</h1>
-        
-        <div class="file-input">
-            <p>1. Selecciona el video:</p>
-            <input type="file" id="videoInput" accept="video/*">
-        </div>
-
-        <div class="file-input">
-            <p>2. Selecciona el archivo de subtítulos (.srt o .vtt):</p>
-            <input type="file" id="subtitleInput" accept=".srt,.vtt">
-        </div>
-
-        <div class="video-container">
-            <video id="videoPlayer" controls>
-                <track id="subtitleTrack" kind="subtitles" label="Español" default>
-                Tu navegador no soporta el elemento video.
-            </video>
-        </div>
-
-        <div id="status" class="status">Estado: Esperando archivos...</div>
-    </div>
-
-    <script>
-        const videoInput = document.getElementById('videoInput');
-        const subtitleInput = document.getElementById('subtitleInput');
-        const videoPlayer = document.getElementById('videoPlayer');
-        const subtitleTrack = document.getElementById('subtitleTrack');
-        const statusDiv = document.getElementById('status');
-
-        // Manejar la selección del video
-        videoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const videoUrl = URL.createObjectURL(file);
-                videoPlayer.src = videoUrl;
-                statusDiv.textContent = 'Estado: Video cargado. Por favor selecciona el archivo de subtítulos.';
-            }
-        });
-
-        // Manejar la selección del archivo de subtítulos
-        subtitleInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    // Si es un archivo .srt, convertirlo a WebVTT
-                    const content = await file.text();
-                    let subtitleContent;
-                    
-                    if (file.name.endsWith('.srt')) {
-                        subtitleContent = convertSrtToVtt(content);
-                    } else {
-                        subtitleContent = content;
-                    }
-
-                    const subtitleBlob = new Blob([subtitleContent], { type: 'text/vtt' });
-                    const subtitleUrl = URL.createObjectURL(subtitleBlob);
-                    
-                    subtitleTrack.src = subtitleUrl;
-                    statusDiv.textContent = 'Estado: ¡Video y subtítulos cargados! Puedes comenzar la reproducción.';
-                } catch (error) {
-                    statusDiv.textContent = 'Error: No se pudo cargar el archivo de subtítulos.';
-                    console.error(error);
-                }
-            }
-        });
-
-        // Función para convertir SRT a WebVTT
-        function convertSrtToVtt(srtContent) {
-            // Agregar el encabezado WebVTT
-            let vttContent = 'WEBVTT\n\n';
-            
-            // Convertir el formato de tiempo de SRT a VTT
-            vttContent += srtContent
-                .replace(/(\d{2}):(\d{2}):(\d{2}),(\d{3})/g, '$1:$2:$3.$4')
-                .replace(/\r/g, '');
-
-            return vttContent;
-        }
-    </script>
-</body>
-</html>
+      </script>
+    </head>
+    <body>
+      <h1>Generador de Subtítulos en Tiempo Real</h1>
+      <input type="file" id="fileInput" accept="video/*">
+      <video id="video" controls></video>
+      <div id="subtitulos"></div>
+      <script type="module" src="main.js"></script>
+    </body>
+    </html>
