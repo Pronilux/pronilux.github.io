@@ -1,6 +1,7 @@
 // Configuración básica para reconocimiento de voz
 const subtitulosDiv = document.getElementById('subtitulos');
 const video = document.getElementById('video');
+const fileInput = document.getElementById('fileInput');
 let recognition;
 
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -16,6 +17,14 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 } else {
     console.error("El reconocimiento de voz no es compatible con este navegador.");
 }
+
+// Función para cargar el video seleccionado
+fileInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    const fileURL = URL.createObjectURL(file);
+    video.src = fileURL;
+    console.log("Video cargado:", fileURL);
+});
 
 // Función para iniciar reconocimiento cuando se reproduce el video
 video.addEventListener('play', function () {
