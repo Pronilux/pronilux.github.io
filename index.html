@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Subtítulos en Tiempo Real</title>
+    <title>Reproductor con Subtítulos</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -27,197 +27,95 @@
             max-width: 100%;
             border-radius: 4px;
         }
-        #subtitles {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: black;
-            color: white;
-            border-radius: 4px;
-            min-height: 50px;
-            text-align: center;
-            font-size: 18px;
-        }
         .file-input {
-            margin: 20px 0;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        button:disabled {
-            background-color: #cccccc;
-        }
-        #status {
-            margin-top: 10px;
-            color: #666;
-        }
-        .controls {
             margin: 10px 0;
-            text-align: center;
+        }
+        .status {
+            color: #666;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Generador de Subtítulos en Tiempo Real</h1>
+        <h1>Reproductor con Subtítulos</h1>
         
         <div class="file-input">
+            <p>1. Selecciona el video:</p>
             <input type="file" id="videoInput" accept="video/*">
         </div>
 
+        <div class="file-input">
+            <p>2. Selecciona el archivo de subtítulos (.srt o .vtt):</p>
+            <input type="file" id="subtitleInput" accept=".srt,.vtt">
+        </div>
+
         <div class="video-container">
-            <video id="videoPlayer" controls crossorigin="anonymous">
+            <video id="videoPlayer" controls>
+                <track id="subtitleTrack" kind="subtitles" label="Español" default>
                 Tu navegador no soporta el elemento video.
             </video>
         </div>
 
-        <div class="controls">
-            <button id="startRecognition">Iniciar Subtítulos</button>
-            <button id="stopRecognition" disabled>Detener Subtítulos</button>
-            <button id="downloadSubtitles" disabled>Descargar Subtítulos</button>
-        </div>
-        
-        <div id="status">Estado: Esperando video...</div>
-        <div id="subtitles"></div>
+        <div id="status" class="status">Estado: Esperando archivos...</div>
     </div>
 
     <script>
         const videoInput = document.getElementById('videoInput');
+        const subtitleInput = document.getElementById('subtitleInput');
         const videoPlayer = document.getElementById('videoPlayer');
-        const startButton = document.getElementById('startRecognition');
-        const stopButton = document.getElementById('stopRecognition');
-        const downloadButton = document.getElementById('downloadSubtitles');
-        const subtitlesDiv = document.getElementById('subtitles');
+        const subtitleTrack = document.getElementById('subtitleTrack');
         const statusDiv = document.getElementById('status');
-        
-        let recognition = null;
-        let subtitlesText = [];
-        let startTime = 0;
 
-        // Manejar la selección de archivo de video
+        // Manejar la selección del video
         videoInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 const videoUrl = URL.createObjectURL(file);
                 videoPlayer.src = videoUrl;
-                statusDiv.textContent = 'Estado: Video cargado. Listo para iniciar subtítulos.';
-                startButton.disabled = false;
-                subtitlesText = [];
-                subtitlesDiv.textContent = '';
-                downloadButton.disabled = true;
+                statusDiv.textContent = 'Estado: Video cargado. Por favor selecciona el archivo de subtítulos.';
             }
         });
 
-        // Configurar reconocimiento de voz
-        if ('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'es-ES';
-
-            recognition.onstart = () => {
-                statusDiv.textContent = 'Estado: Generando subtítulos...';
-                startButton.disabled = true;
-                stopButton.disabled = false;
-                startTime = videoPlayer.currentTime;
-                videoPlayer.play();
-            };
-
-            recognition.onend = () => {
-                statusDiv.textContent = 'Estado: Subtítulos detenidos';
-                startButton.disabled = false;
-                stopButton.disabled = true;
-                downloadButton.disabled = false;
-            };
-
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript;
-                        const currentTime = videoPlayer.currentTime;
-                        subtitlesText.push({
-                            start: formatTime(startTime),
-                            end: formatTime(currentTime),
-                            text: transcript.trim()
-                        });
-                        startTime = currentTime;
+        // Manejar la selección del archivo de subtítulos
+        subtitleInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    // Si es un archivo .srt, convertirlo a WebVTT
+                    const content = await file.text();
+                    let subtitleContent;
+                    
+                    if (file.name.endsWith('.srt')) {
+                        subtitleContent = convertSrtToVtt(content);
                     } else {
-                        interimTranscript += transcript;
+                        subtitleContent = content;
                     }
+
+                    const subtitleBlob = new Blob([subtitleContent], { type: 'text/vtt' });
+                    const subtitleUrl = URL.createObjectURL(subtitleBlob);
+                    
+                    subtitleTrack.src = subtitleUrl;
+                    statusDiv.textContent = 'Estado: ¡Video y subtítulos cargados! Puedes comenzar la reproducción.';
+                } catch (error) {
+                    statusDiv.textContent = 'Error: No se pudo cargar el archivo de subtítulos.';
+                    console.error(error);
                 }
+            }
+        });
 
-                subtitlesDiv.textContent = interimTranscript || finalTranscript || 'Escuchando...';
-            };
+        // Función para convertir SRT a WebVTT
+        function convertSrtToVtt(srtContent) {
+            // Agregar el encabezado WebVTT
+            let vttContent = 'WEBVTT\n\n';
+            
+            // Convertir el formato de tiempo de SRT a VTT
+            vttContent += srtContent
+                .replace(/(\d{2}):(\d{2}):(\d{2}),(\d{3})/g, '$1:$2:$3.$4')
+                .replace(/\r/g, '');
 
-            recognition.onerror = (event) => {
-                statusDiv.textContent = 'Error: ' + event.error;
-                stopButton.click();
-            };
-        } else {
-            statusDiv.textContent = 'Error: Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome.';
-            startButton.disabled = true;
+            return vttContent;
         }
-
-        // Botones de control
-        startButton.addEventListener('click', () => {
-            if (recognition && videoPlayer.src) {
-                recognition.start();
-            }
-        });
-
-        stopButton.addEventListener('click', () => {
-            if (recognition) {
-                recognition.stop();
-                videoPlayer.pause();
-            }
-        });
-
-        // Función para formatear tiempo
-        function formatTime(seconds) {
-            const pad = (num) => num.toString().padStart(2, '0');
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            const ms = Math.floor((seconds % 1) * 1000);
-            return `${pad(hours)}:${pad(minutes)}:${pad(secs)},${ms.toString().padStart(3, '0')}`;
-        }
-
-        // Descargar subtítulos en formato SRT
-        downloadButton.addEventListener('click', () => {
-            let srtContent = '';
-            subtitlesText.forEach((sub, index) => {
-                srtContent += `${index + 1}\n${sub.start} --> ${sub.end}\n${sub.text}\n\n`;
-            });
-
-            const blob = new Blob([srtContent], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'subtitulos.srt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-
-        // Manejar fin del video
-        videoPlayer.addEventListener('ended', () => {
-            if (recognition && recognition.state === 'active') {
-                stopButton.click();
-            }
-        });
     </script>
 </body>
 </html>
